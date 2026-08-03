@@ -42,9 +42,11 @@ def complete(model, system, messages, tools=None):
     specs, one per callable tool, or empty/None for a plain text turn.
     """
     tools = tools or []
+    # No fixed temperature: current-generation Claude models reject it outright,
+    # and pinning one would defeat staying model-agnostic across generations.
     body = {
         "model": model, "system": system, "messages": _to_wire(messages),
-        "max_tokens": 8192, "temperature": 0.4,
+        "max_tokens": 8192,
     }
     if tools:
         body["tools"] = [_to_tool(t["schema"]) for t in tools]
