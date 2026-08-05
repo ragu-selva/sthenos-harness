@@ -13,11 +13,18 @@ Design rules this file embodies:
   - on_event is the only window into what happened; day 1 just prints it.
 """
 
+import logging
 import os
 import random
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+# Model replies routinely contain emoji and smart quotes; a Windows console
+# defaults to cp1252 and raises UnicodeEncodeError on them, which reads like
+# the loop broke when it was only the printing that did.
+sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+sys.stderr.reconfigure(encoding="utf-8", errors="replace")
 
 from Sthenos import loop, provider
 
@@ -59,6 +66,11 @@ def always_allow(call):
 
 
 if __name__ == "__main__":
+    logging.basicConfig(
+        level=logging.DEBUG,
+        format="%(asctime)s [%(name)s] %(levelname)s: %(message)s",
+        datefmt="%H:%M:%S",
+    )
     task = "Roll 3 dice and tell me whether the total beats 10"
     print(f"user: {task}")
     loop.run_loop(

@@ -19,6 +19,7 @@ wired up so enabling it later is a one-line change, not a redesign.
 """
 
 import json
+import logging
 import os
 import time
 import urllib.error
@@ -27,6 +28,8 @@ import urllib.request
 API_ROOT = "https://api.anthropic.com/v1/messages"
 DEFAULT_MODEL = "claude-sonnet-5"
 _ANTHROPIC_VERSION = "2023-06-01"
+
+logger = logging.getLogger(__name__)
 
 def api_key():
     """Read the API key from Sthenos_API_KEY, falling back to ANTHROPIC_API_KEY."""
@@ -50,7 +53,13 @@ def complete(model, system, messages, tools=None):
     }
     if tools:
         body["tools"] = [_to_tool(t["schema"]) for t in tools]
-    return _from_wire(_post(API_ROOT, body))
+    logger.debug("complete() IN -- model=%s tools=%s messages_in=%d",
+                 model, [t["schema"]["name"] for t in tools], len(messages))
+    logger.debug("wire request body:\n%s", json.dumps(body, indent=2))
+    result = _from_wire(_post(API_ROOT, body))
+    logger.debug("complete() OUT -- text=%r tool_calls=%d usage=%s",
+                 result["text"], len(result["tool_calls"]), result["usage"])
+    return result
 
 def _to_tool(schema):
     """Map a neutral {name, description, parameters} spec to Claude's input_schema shape."""
@@ -93,9 +102,12 @@ def _from_wire(data):
     for block in data.get("content", []):
         if block["type"] == "text":
             text_parts.append(block["text"])
+            logger.debug("wire block IN -- text (%d chars)", len(block["text"]))
         elif block["type"] == "tool_use":  # "thinking" blocks, if any, are skipped here
             tool_calls.append({"name": block["name"], "args": block.get("input", {}),
                                 "signature": block.get("signature")})
+            logger.debug("wire block IN -- tool_use name=%s args=%s signature=%s",
+                         block["name"], block.get("input", {}), bool(block.get("signature")))
     usage = data.get("usage", {})
     return {"text": "".join(text_parts), "tool_calls": tool_calls,
             "usage": {"input": usage.get("input_tokens", 0), "output": usage.get("output_tokens", 0)}}
@@ -108,19 +120,27 @@ def _post(url, body, retries=5):
     """
     headers = {"Content-Type": "application/json", "x-api-key": api_key(),
                "anthropic-version": _ANTHROPIC_VERSION}
+    logged_headers = {**headers, "x-api-key": "***redacted***"}
     data = json.dumps(body).encode("utf-8")
     for attempt in range(retries):
         req = urllib.request.Request(url, data=data, headers=headers, method="POST")
+        logger.debug("POST %s attempt %d/%d headers=%s", url, attempt + 1, retries, logged_headers)
         try:
             with urllib.request.urlopen(req, timeout=600) as resp:
-                return json.loads(resp.read())
+                raw = resp.read()
+                logger.debug("raw response (%d bytes):\n%s", len(raw), raw.decode("utf-8", "replace"))
+                return json.loads(raw)
         except urllib.error.HTTPError as e:
             if e.code in (429, 500, 502, 503) and attempt < retries - 1:
-                time.sleep(2 ** attempt * 2)
+                wait = 2 ** attempt * 2
+                logger.warning("HTTP %d -- retrying in %ds (attempt %d/%d)", e.code, wait, attempt + 1, retries)
+                time.sleep(wait)
                 continue
             raise RuntimeError(f"HTTP {e.code}: {e.read()[:400].decode('utf-8', 'replace')}")
-        except (urllib.error.URLError, TimeoutError):
+        except (urllib.error.URLError, TimeoutError) as e:
             if attempt < retries - 1:
-                time.sleep(2 ** attempt * 2)
+                wait = 2 ** attempt * 2
+                logger.warning("network error %r -- retrying in %ds (attempt %d/%d)", e, wait, attempt + 1, retries)
+                time.sleep(wait)
                 continue
             raise

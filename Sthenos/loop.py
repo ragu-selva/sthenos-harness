@@ -18,7 +18,11 @@ Design rules:
     function's shape.
 """
 
+import logging
+
 from . import provider
+
+logger = logging.getLogger(__name__)
 
 
 def run_loop(model, system, messages, tools, on_event, before_tool,
@@ -29,18 +33,21 @@ def run_loop(model, system, messages, tools, on_event, before_tool,
     .run(**kwargs). Returns the model's final answer text.
     """
     specs = [t.spec for t in tools.values()]
-    for _ in range(max_turns):
+    for turn in range(max_turns):
+        logger.debug("=== turn %d/%d -- %d messages in history ===", turn + 1, max_turns, len(messages))
         if before_turn is not None:
             messages = before_turn(messages)
         reply = provider.complete(model, system, messages, specs)
         messages.append({"role": "assistant", "text": reply["text"], "tool_calls": reply["tool_calls"]})
         on_event("assistant", reply)
         if not reply["tool_calls"]:
+            logger.debug("no tool calls -- ending loop, returning final text")
             return reply["text"]
         for call in reply["tool_calls"]:
             result = _run_tool(call, tools, before_tool, on_event)
             messages.append({"role": "tool", "name": call["name"], "text": str(result)})
 
+    logger.debug("turn limit (%d) reached -- forcing wrap-up turn with no tools", max_turns)
     messages.append({"role": "user", "text": "Turn limit reached; wrap up now."})
     reply = provider.complete(model, system, messages, [])
     messages.append({"role": "assistant", "text": reply["text"], "tool_calls": reply["tool_calls"]})
@@ -55,17 +62,23 @@ def _run_tool(call, tools, before_tool, on_event):
     keeps going so the model can see what happened and adapt.
     """
     name = call["name"]
+    logger.debug("tool call IN  -- name=%s args=%s", name, call["args"])
     on_event("tool_start", call)
     if name not in tools:
         result = f"ERROR: unknown tool {name}"
+        logger.debug("gate skipped -- %s is not a registered tool", name)
     else:
         reason = before_tool(call)
         if reason is not None:
             result = f"BLOCKED: {reason}"
+            logger.debug("before_tool BLOCKED %s: %s", name, reason)
         else:
+            logger.debug("before_tool ALLOWED %s", name)
             try:
                 result = tools[name].run(**call["args"])
             except Exception as e:
                 result = f"ERROR: {type(e).__name__}: {e}"
+                logger.debug("tool %s raised: %s", name, result)
+    logger.debug("tool call OUT -- name=%s result=%s", name, result)
     on_event("tool_end", {"name": name, "result": result})
     return result
