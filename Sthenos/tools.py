@@ -84,6 +84,24 @@ def tool(description, **params):
     return decorate
 
 
+def _shell_hint():
+    """Describe the shell bash() actually runs under.
+
+    shell=True means COMSPEC on Windows and $SHELL-ish /bin/sh elsewhere,
+    and a model that guesses wrong burns turns discovering it one failed
+    command at a time -- worse on Windows, where a cmd.exe that inherited
+    Git Bash's PATH answers 'pwd' but rejects 'a; b' and looks POSIX
+    right up until it isn't. Saying so in the tool description is the
+    cheapest fix: it reaches every caller without a prompt knowing.
+    """
+    if os.name == "nt":
+        shell = os.path.basename(os.environ.get("COMSPEC", "cmd.exe"))
+        return (f" Runs through Windows {shell}: chain with && rather than ';', use Windows"
+                " paths ('C:/dir/prog.exe', never '/c/dir/prog.exe'), and prefer 'python'"
+                " over 'python3'. POSIX utilities may be on PATH but are not guaranteed.")
+    return f" Runs through {os.environ.get('SHELL', '/bin/sh')}."
+
+
 def _matches(rel, name, pattern):
     """True if pattern matches the relative path or the basename.
 
@@ -162,7 +180,7 @@ def core_tools(workdir):
             f.write(text.replace(old, new, 1))
         return f"Edited {path}"
 
-    @tool("Run a shell command in the working directory",
+    @tool("Run a shell command in the working directory." + _shell_hint(),
           command="Shell command to run",
           timeout="Seconds to wait before giving up (default 120)")
     def bash(command, timeout="120"):
