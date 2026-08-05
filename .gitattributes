@@ -1,0 +1,5 @@
+# Normalize line endings so the repo reads the same on Windows, macOS and
+# Linux. Text files are stored as LF and checked out as LF everywhere --
+# without this, a Windows checkout rewrites them to CRLF and a later clone
+# on another platform sees every file as fully rewritten.
+* text=auto eol=lf
