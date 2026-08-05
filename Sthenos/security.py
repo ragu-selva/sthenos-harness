@@ -26,7 +26,10 @@ Design rules:
     which is the failure that actually happens.
 """
 
+import logging
 import re
+
+logger = logging.getLogger(__name__)
 
 # Reading cannot destroy anything, so it never needs a decision.
 READ_TOOLS = {"read_file", "list_files", "grep"}
@@ -66,8 +69,12 @@ class Policy:
             command = args.get("command", "")
             for pattern in DENY_PATTERNS:
                 if re.search(pattern, command, re.IGNORECASE):
-                    return (f"{command!r} matches a denied command pattern "
-                            f"({pattern!r}); this is refused in every mode")
+                    # The regex is for whoever tunes the list, not for the
+                    # model -- it reads the reason as a tool result and a
+                    # wall of escaped backslashes teaches it nothing.
+                    logger.warning("deny pattern %r matched command %r", pattern, command)
+                    return (f"{command!r} is a destructive command that is refused "
+                            f"in every mode; no policy setting will allow it")
 
         if name in READ_TOOLS or self.mode == "yolo":
             return None
