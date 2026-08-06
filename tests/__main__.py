@@ -9,7 +9,9 @@ import importlib
 import sys
 import traceback
 
-MODULES = ("tests.test_tools", "tests.test_security", "tests.test_context")
+MODULES = ("tests.test_tools", "tests.test_security", "tests.test_context",
+           "tests.test_memory", "tests.test_skills", "tests.test_session",
+           "tests.test_subagent")
 
 
 def main():
