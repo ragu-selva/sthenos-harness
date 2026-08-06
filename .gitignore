@@ -3,3 +3,4 @@ __pycache__/
 .DS_Store
 env_harenss.sh
 demos/scratch/
+demos/scratch_*/
