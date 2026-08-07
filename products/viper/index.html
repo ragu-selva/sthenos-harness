@@ -1,0 +1,1379 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="Viper is a single-file, dependency-free browser snake game with grid movement, escalating speed, and a high score saved to your device.">
+<meta name="theme-color" content="#0e1512">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'%3E%3Crect width='48' height='48' rx='10' fill='%23132018'/%3E%3Crect x='10' y='16' width='12' height='12' rx='3' fill='%233ddc84'/%3E%3Crect x='22' y='16' width='12' height='12' rx='3' fill='%237cf2b3'/%3E%3Ccircle cx='32' cy='20' r='9' fill='none'/%3E%3Ccircle cx='30' cy='31' r='4' fill='%23ef6461'/%3E%3C/svg%3E">
+<title>Viper — A Modern Snake Game</title>
+<style>
+:root {
+  /* Color system */
+  --color-bg: #0e1512;
+  --color-bg-alt: #131d18;
+  --color-surface: #17231d;
+  --color-surface-raised: #1d2c24;
+  --color-border: #2a3d32;
+  --color-border-soft: #223229;
+  --color-text: #e9f3ec;
+  --color-text-muted: #9db4a6;
+  --color-text-dim: #93a89d;
+  --color-primary: #3ddc84;
+  --color-primary-dim: #2bb46a;
+  --color-primary-contrast: #06170e;
+  --color-accent: #f2c94c;
+  --color-danger: #ef6461;
+  --color-food: #ef6461;
+  --color-snake: #3ddc84;
+  --color-snake-head: #7cf2b3;
+  --color-grid-a: #14201a;
+  --color-grid-b: #172419;
+
+  /* Light theme override values (used via [data-theme="light"]) */
+
+  /* Typography */
+  --font-display: "Segoe UI", -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
+  --font-body: "Segoe UI", -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
+  --font-mono: "Consolas", "SFMono-Regular", Menlo, monospace;
+
+  --fs-100: 0.8125rem;
+  --fs-200: 0.9375rem;
+  --fs-300: 1.0625rem;
+  --fs-400: 1.25rem;
+  --fs-500: 1.625rem;
+  --fs-600: 2.1rem;
+  --fs-700: 2.8rem;
+  --fs-800: 3.6rem;
+
+  /* Spacing scale */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.5rem;
+  --space-6: 2rem;
+  --space-7: 3rem;
+  --space-8: 4.5rem;
+
+  /* Radius & shadow */
+  --radius-sm: 6px;
+  --radius-md: 12px;
+  --radius-lg: 20px;
+  --radius-pill: 999px;
+  --shadow-md: 0 10px 30px rgba(0,0,0,0.35);
+  --shadow-glow: 0 0 0 1px rgba(61,220,132,0.25), 0 0 40px rgba(61,220,132,0.08);
+
+  /* Layout */
+  --wrap-max: 1180px;
+  --border-w: 1px;
+  --transition-fast: 150ms ease;
+  --transition-med: 260ms ease;
+}
+
+[data-theme="light"] {
+  --color-bg: #f4f7f2;
+  --color-bg-alt: #eaf1e6;
+  --color-surface: #ffffff;
+  --color-surface-raised: #ffffff;
+  --color-border: #d6e2d2;
+  --color-border-soft: #e2ecdf;
+  --color-text: #16241b;
+  --color-text-muted: #4c5f52;
+  --color-text-dim: #4f5c50;
+  --color-primary: #1f9d5c;
+  --color-primary-dim: #17824c;
+  --color-primary-contrast: #ffffff;
+  --color-accent: #b6860b;
+  --color-danger: #c94a47;
+  --color-food: #c94a47;
+  --color-snake: #1f9d5c;
+  --color-snake-head: #0f6d3d;
+  --color-grid-a: #eef4ea;
+  --color-grid-b: #e5eee1;
+  --shadow-glow: 0 0 0 1px rgba(31,157,92,0.2), 0 0 40px rgba(31,157,92,0.08);
+}
+
+* { box-sizing: border-box; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  margin: 0;
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-family: var(--font-body);
+  font-size: var(--fs-200);
+  line-height: 1.6;
+  transition: background var(--transition-med), color var(--transition-med);
+}
+
+h1, h2, h3 {
+  font-family: var(--font-display);
+  line-height: 1.15;
+  margin: 0 0 var(--space-3);
+  font-weight: 800;
+  letter-spacing: -0.01em;
+}
+
+p { margin: 0 0 var(--space-4); color: var(--color-text-muted); }
+
+a { color: var(--color-primary); }
+
+.wrap {
+  max-width: var(--wrap-max);
+  margin: 0 auto;
+  padding: 0 var(--space-5);
+}
+
+.skip-link {
+  position: absolute;
+  left: -999px;
+  top: auto;
+}
+.skip-link:focus {
+  position: fixed;
+  left: var(--space-4);
+  top: var(--space-4);
+  z-index: 999;
+  background: var(--color-primary);
+  color: var(--color-primary-contrast);
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-sm);
+  font-weight: 700;
+}
+
+#game-canvas:focus-visible {
+  outline: 3px solid var(--color-accent);
+  outline-offset: 3px;
+}
+
+:focus-visible {
+  outline: 3px solid var(--color-accent);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* Header */
+.site-header {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  background: color-mix(in srgb, var(--color-bg) 88%, transparent);
+  backdrop-filter: blur(10px);
+  border-bottom: var(--border-w) solid var(--color-border-soft);
+}
+.header-inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding: var(--space-3) var(--space-5);
+  flex-wrap: wrap;
+}
+.brand {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: var(--fs-400);
+  color: var(--color-text);
+  text-decoration: none;
+}
+.brand-mark { color: var(--color-primary); }
+.site-nav {
+  display: flex;
+  gap: var(--space-5);
+  flex-wrap: wrap;
+}
+.site-nav a {
+  color: var(--color-text-muted);
+  text-decoration: none;
+  font-weight: 600;
+  font-size: var(--fs-100);
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  transition: color var(--transition-fast);
+}
+.site-nav a:hover { color: var(--color-primary); }
+
+/* Buttons */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: var(--fs-200);
+  padding: 0.7rem 1.4rem;
+  border-radius: var(--radius-pill);
+  border: var(--border-w) solid transparent;
+  cursor: pointer;
+  text-decoration: none;
+  transition: transform var(--transition-fast), background var(--transition-fast), border-color var(--transition-fast), box-shadow var(--transition-fast);
+  user-select: none;
+}
+.btn:active { transform: translateY(1px) scale(0.98); }
+.btn-primary {
+  background: var(--color-primary);
+  color: var(--color-primary-contrast);
+  box-shadow: var(--shadow-glow);
+}
+.btn-primary:hover { background: var(--color-primary-dim); }
+.btn-secondary {
+  background: var(--color-surface-raised);
+  color: var(--color-text);
+  border-color: var(--color-border);
+}
+.btn-secondary:hover { border-color: var(--color-primary); color: var(--color-primary); }
+.btn-ghost {
+  background: transparent;
+  color: var(--color-text-muted);
+  border-color: transparent;
+}
+.btn-ghost:hover { color: var(--color-text); background: var(--color-surface); }
+.btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* Hero */
+.hero {
+  padding: var(--space-8) 0 var(--space-7);
+  background:
+    radial-gradient(circle at 15% 20%, color-mix(in srgb, var(--color-primary) 12%, transparent), transparent 55%),
+    var(--color-bg);
+  border-bottom: var(--border-w) solid var(--color-border-soft);
+  overflow: hidden;
+}
+.hero-inner {
+  display: grid;
+  grid-template-columns: 1.1fr 0.9fr;
+  gap: var(--space-7);
+  align-items: center;
+}
+.eyebrow {
+  display: inline-block;
+  color: var(--color-primary);
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  font-size: var(--fs-100);
+  margin-bottom: var(--space-3);
+}
+.hero h1 {
+  font-size: var(--fs-800);
+  margin-bottom: var(--space-4);
+}
+.hero-lede {
+  font-size: var(--fs-300);
+  max-width: 42ch;
+}
+.hero-actions {
+  display: flex;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+  margin: var(--space-5) 0 var(--space-6);
+}
+.hero-stats {
+  display: flex;
+  gap: var(--space-6);
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  flex-wrap: wrap;
+}
+.hero-stats li {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.hero-stats strong {
+  font-size: var(--fs-500);
+  font-family: var(--font-display);
+  color: var(--color-primary);
+}
+.hero-stats span {
+  font-size: var(--fs-100);
+  color: var(--color-text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.hero-art { display: flex; justify-content: center; }
+.hero-art svg { width: 100%; max-width: 420px; height: auto; }
+
+/* Section rhythm */
+.section-heading {
+  font-size: var(--fs-600);
+}
+.section-lede {
+  font-size: var(--fs-300);
+  max-width: 60ch;
+}
+.section {
+  padding: var(--space-8) 0;
+  border-bottom: var(--border-w) solid var(--color-border-soft);
+}
+.section-grid {
+  display: grid;
+  grid-template-columns: 1.1fr 0.9fr;
+  gap: var(--space-7);
+  align-items: center;
+}
+.section-grid.reverse .section-art { order: 2; }
+.section-art { display: flex; justify-content: center; }
+.section-art svg { width: 100%; max-width: 360px; height: auto; }
+
+/* Game section */
+.game-section { padding: var(--space-7) 0; }
+.game-panel {
+  background: var(--color-surface);
+  border: var(--border-w) solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-5);
+  box-shadow: var(--shadow-md);
+}
+.hud {
+  display: flex;
+  align-items: center;
+  gap: var(--space-6);
+  flex-wrap: wrap;
+  margin-bottom: var(--space-4);
+  padding-bottom: var(--space-4);
+  border-bottom: var(--border-w) dashed var(--color-border);
+}
+.hud-stat { display: flex; flex-direction: column; gap: 2px; }
+.hud-label {
+  font-size: var(--fs-100);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--color-text-dim);
+}
+.hud-value {
+  font-family: var(--font-mono);
+  font-size: var(--fs-500);
+  font-weight: 700;
+  color: var(--color-primary);
+}
+.hud-status {
+  margin-left: auto;
+  font-size: var(--fs-200);
+  color: var(--color-text-muted);
+  font-weight: 600;
+}
+.hud-status.is-danger {
+  color: var(--color-danger);
+}
+.overlay-card.is-danger {
+  border-color: var(--color-danger);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-danger) 40%, transparent), var(--shadow-md);
+}
+.overlay-card.is-danger h3 {
+  color: var(--color-danger);
+}
+.stage-wrap {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  margin: 0 auto var(--space-5);
+  max-width: 480px;
+}
+#game-canvas {
+  width: 100%;
+  height: auto;
+  aspect-ratio: 1 / 1;
+  display: block;
+  border-radius: var(--radius-md);
+  border: var(--border-w) solid var(--color-border);
+  background: var(--color-grid-a);
+}
+.overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: color-mix(in srgb, var(--color-bg) 70%, transparent);
+  border-radius: var(--radius-md);
+  transition: opacity var(--transition-med);
+}
+.overlay.is-hidden {
+  opacity: 0;
+  pointer-events: none;
+}
+.overlay-card {
+  text-align: center;
+  background: var(--color-surface-raised);
+  border: var(--border-w) solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-6);
+  max-width: 320px;
+  box-shadow: var(--shadow-md);
+}
+.overlay-card h3 { font-size: var(--fs-500); }
+.controls-row {
+  display: flex;
+  gap: var(--space-3);
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-bottom: var(--space-4);
+}
+.touch-controls {
+  display: none;
+  grid-template-columns: repeat(3, 56px);
+  grid-template-rows: repeat(2, 56px);
+  gap: var(--space-2);
+  justify-content: center;
+  margin: 0 auto;
+}
+.touch-btn {
+  border-radius: var(--radius-sm);
+  border: var(--border-w) solid var(--color-border);
+  background: var(--color-surface-raised);
+  color: var(--color-text);
+  font-size: var(--fs-400);
+  cursor: pointer;
+}
+.touch-btn:active { background: var(--color-primary); color: var(--color-primary-contrast); }
+.touch-up { grid-column: 2; grid-row: 1; }
+.touch-left { grid-column: 1; grid-row: 2; }
+.touch-down { grid-column: 2; grid-row: 2; }
+.touch-right { grid-column: 3; grid-row: 2; }
+
+@media (max-width: 700px) {
+  .touch-controls { display: grid; }
+}
+
+/* How to play steps */
+.step-list {
+  list-style: none;
+  counter-reset: step;
+  padding: 0;
+  margin: var(--space-5) 0 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+.step-list li {
+  counter-increment: step;
+  position: relative;
+  padding-left: var(--space-7);
+  color: var(--color-text-muted);
+  font-size: var(--fs-200);
+}
+.step-list li::before {
+  content: counter(step);
+  position: absolute;
+  left: 0;
+  top: -2px;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: var(--color-surface-raised);
+  border: var(--border-w) solid var(--color-primary);
+  color: var(--color-primary);
+  font-weight: 800;
+  font-family: var(--font-mono);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.step-list kbd {
+  display: inline-block;
+  padding: 0.1rem 0.5rem;
+  border-radius: var(--radius-sm);
+  border: var(--border-w) solid var(--color-border);
+  background: var(--color-surface-raised);
+  font-family: var(--font-mono);
+  font-size: 0.85em;
+  color: var(--color-text);
+}
+
+/* Feature grid */
+.feature-grid, .strategy-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-5);
+  margin-top: var(--space-6);
+}
+.feature-card, .strategy-card {
+  background: var(--color-surface);
+  border: var(--border-w) solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-5);
+  transition: transform var(--transition-fast), border-color var(--transition-fast);
+}
+.feature-card:hover, .strategy-card:hover {
+  transform: translateY(-4px);
+  border-color: var(--color-primary);
+}
+.feature-card svg, .strategy-card .card-icon svg { width: 42px; height: 42px; }
+.feature-card h3, .strategy-card h3 {
+  font-size: var(--fs-300);
+  margin-top: var(--space-3);
+}
+.feature-card p, .strategy-card p { margin-bottom: 0; font-size: var(--fs-200); }
+
+/* Accordion / FAQ */
+.accordion { margin-top: var(--space-6); }
+.accordion-item {
+  border-bottom: var(--border-w) solid var(--color-border-soft);
+}
+.accordion-trigger {
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: none;
+  color: var(--color-text);
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: var(--fs-300);
+  padding: var(--space-4) 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+  gap: var(--space-4);
+}
+.accordion-trigger .chev {
+  transition: transform var(--transition-fast);
+  color: var(--color-primary);
+  flex-shrink: 0;
+}
+.accordion-trigger[aria-expanded="true"] .chev { transform: rotate(180deg); }
+.accordion-panel {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height var(--transition-med);
+}
+.accordion-panel p {
+  padding-bottom: var(--space-4);
+}
+
+/* Footer */
+.site-footer {
+  padding: var(--space-6) 0;
+  background: var(--color-bg-alt);
+}
+.footer-inner {
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  font-size: var(--fs-100);
+  color: var(--color-text-dim);
+}
+.footer-inner p { margin: 0; color: var(--color-text-dim); }
+
+/* Responsive */
+@media (max-width: 1000px) {
+  .hero-inner, .section-grid { grid-template-columns: 1fr; }
+  .section-grid.reverse .section-art { order: 0; }
+  .feature-grid, .strategy-grid { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 640px) {
+  .site-nav { order: 3; width: 100%; justify-content: space-between; gap: var(--space-3); }
+  .hero h1 { font-size: var(--fs-700); }
+  .feature-grid, .strategy-grid { grid-template-columns: 1fr; }
+  .hud { gap: var(--space-4); }
+  .hud-status { margin-left: 0; width: 100%; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  * {
+    transition-duration: 0.001ms !important;
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+  }
+  .feature-card:hover, .strategy-card:hover, .btn:active {
+    transform: none;
+  }
+}
+</style>
+</head>
+<body>
+
+<a class="skip-link" href="#game">Skip to game</a>
+<a class="skip-link" href="#faq">Skip to FAQ</a>
+
+<header class="site-header">
+  <div class="wrap header-inner">
+    <a class="brand" href="#top" aria-label="Viper home">
+      <span class="brand-mark" aria-hidden="true">◈</span>
+      Viper
+    </a>
+    <nav class="site-nav" aria-label="Primary">
+      <a href="#game">Play</a>
+      <a href="#how-to-play">How to Play</a>
+      <a href="#features">Features</a>
+      <a href="#strategy">Strategy</a>
+      <a href="#faq">FAQ</a>
+    </nav>
+    <button id="theme-toggle" class="btn btn-ghost" type="button" aria-pressed="false">
+      <span class="theme-icon" aria-hidden="true">☾</span>
+      <span class="theme-label">Dark mode</span>
+    </button>
+  </div>
+</header>
+
+<main id="top">
+
+<section class="hero" id="hero">
+  <div class="wrap hero-inner">
+    <div class="hero-copy">
+      <p class="eyebrow">A browser classic, rebuilt from scratch</p>
+      <h1>Slither, grow, and chase your own best score.</h1>
+      <p class="hero-lede">Viper is a single-file snake game with crisp grid movement, escalating speed, and a high score that remembers you. No installs, no accounts, no ads — just open the page and play.</p>
+      <div class="hero-actions">
+        <a href="#game" class="btn btn-primary">Play now</a>
+        <a href="#how-to-play" class="btn btn-secondary">Learn the rules</a>
+      </div>
+      <ul class="hero-stats">
+        <li><strong>1</strong><span>HTML file, zero installs</span></li>
+        <li><strong>0</strong><span>trackers, ads, or accounts</span></li>
+        <li><strong>∞</strong><span>replays, free forever</span></li>
+      </ul>
+    </div>
+    <div class="hero-art" aria-hidden="true">
+      <svg viewBox="0 0 400 400" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect x="10" y="10" width="380" height="380" rx="18" fill="#132018" stroke="#2a3d32" stroke-width="2"/>
+        <g opacity="0.5">
+          <rect x="30" y="30" width="340" height="340" fill="url(#checker)"/>
+        </g>
+        <defs>
+          <pattern id="checker" width="34" height="34" patternUnits="userSpaceOnUse">
+            <rect width="34" height="34" fill="#152219"/>
+            <rect width="17" height="17" fill="#182619"/>
+            <rect x="17" y="17" width="17" height="17" fill="#182619"/>
+          </pattern>
+        </defs>
+        <!-- snake body, hand-drawn path of rounded segments -->
+        <g>
+          <rect x="60" y="120" width="30" height="30" rx="7" fill="#2bb46a"/>
+          <rect x="92" y="120" width="30" height="30" rx="7" fill="#31c877"/>
+          <rect x="124" y="120" width="30" height="30" rx="7" fill="#35d47c"/>
+          <rect x="124" y="152" width="30" height="30" rx="7" fill="#38da80"/>
+          <rect x="124" y="184" width="30" height="30" rx="7" fill="#3ddc84"/>
+          <rect x="156" y="184" width="30" height="30" rx="7" fill="#3ddc84"/>
+          <rect x="188" y="184" width="34" height="34" rx="9" fill="#7cf2b3"/>
+          <circle cx="209" cy="197" r="2.6" fill="#06170e"/>
+          <circle cx="197" cy="197" r="2.6" fill="#06170e"/>
+        </g>
+        <!-- food -->
+        <circle cx="290" cy="270" r="13" fill="#ef6461"/>
+        <circle cx="286" cy="266" r="4" fill="#ffffff" opacity="0.5"/>
+        <!-- score chip -->
+        <g>
+          <rect x="250" y="46" width="104" height="42" rx="10" fill="#17231d" stroke="#2a3d32"/>
+          <text x="302" y="73" text-anchor="middle" font-family="Consolas, monospace" font-size="20" fill="#3ddc84" font-weight="700">120</text>
+        </g>
+      </svg>
+    </div>
+  </div>
+</section>
+
+<section class="game-section" id="game">
+  <div class="wrap">
+    <h2 class="section-heading">Play Viper</h2>
+    <div class="game-panel">
+      <div class="hud">
+        <div class="hud-stat">
+          <span class="hud-label" id="score-label">Score</span>
+          <span class="hud-value" id="score-value" aria-live="polite" aria-labelledby="score-label">0</span>
+        </div>
+        <div class="hud-stat">
+          <span class="hud-label" id="best-label">Best</span>
+          <span class="hud-value" id="high-score-value" aria-live="polite" aria-labelledby="best-label">0</span>
+        </div>
+        <div class="hud-stat">
+          <span class="hud-label" id="speed-label">Speed level</span>
+          <span class="hud-value" id="speed-value" aria-live="polite" aria-labelledby="speed-label">1</span>
+        </div>
+        <div class="hud-status" id="hud-status" role="status" aria-live="polite">Press Start to play</div>
+      </div>
+
+      <div class="stage-wrap">
+        <canvas id="game-canvas" width="480" height="480" tabindex="0" role="img" aria-label="Snake game board. Use arrow keys or WASD to move once the game has started."></canvas>
+        <div class="overlay" id="overlay">
+          <div class="overlay-card" id="overlay-card" role="dialog" aria-modal="true" aria-labelledby="overlay-title" aria-describedby="overlay-text">
+            <h3 id="overlay-title">Ready?</h3>
+            <p id="overlay-text">Guide the viper to eat glowing prey, avoid walls and your own tail, and beat your saved high score.</p>
+            <button class="btn btn-primary" id="overlay-btn" type="button">Start Game</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="controls-row">
+        <button class="btn btn-secondary" id="pause-btn" type="button">Pause</button>
+        <button class="btn btn-secondary" id="restart-btn" type="button">Restart</button>
+        <button class="btn btn-ghost" id="mute-btn" type="button" aria-pressed="false">
+          <span aria-hidden="true">♪</span> Sound on
+        </button>
+      </div>
+
+      <div class="touch-controls" aria-label="Touch controls">
+        <button class="touch-btn touch-up" id="btn-up" type="button" aria-label="Move up">▲</button>
+        <button class="touch-btn touch-left" id="btn-left" type="button" aria-label="Move left">◀</button>
+        <button class="touch-btn touch-down" id="btn-down" type="button" aria-label="Move down">▼</button>
+        <button class="touch-btn touch-right" id="btn-right" type="button" aria-label="Move right">▶</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="how-to-play" class="section how-to-play">
+  <div class="wrap section-grid">
+    <div>
+      <h2 class="section-heading">How to play</h2>
+      <p class="section-lede">Four rules, zero tutorial screens. Viper is easy to pick up in ten seconds and hard to put down after your first near-miss.</p>
+      <ol class="step-list" id="step-list">
+        <li>Press <kbd>Start Game</kbd> or hit any arrow key to wake the viper up. It begins moving to the right automatically.</li>
+        <li>Steer with <kbd>↑</kbd> <kbd>↓</kbd> <kbd>←</kbd> <kbd>→</kbd> or <kbd>W</kbd> <kbd>A</kbd> <kbd>S</kbd> <kbd>D</kbd>. On touch devices, swipe on the board or tap the on-screen pad.</li>
+        <li>Eat the red food to grow one segment longer and add 10 points to your score. Food always respawns somewhere the snake isn't.</li>
+        <li>Avoid the four walls and your own tail — either one ends the run instantly. Every five pieces of food, the board speeds up, so plan your turns early.</li>
+      </ol>
+    </div>
+    <div class="section-art" aria-hidden="true">
+      <svg viewBox="0 0 300 240" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect x="10" y="10" width="280" height="220" rx="16" fill="#17231d" stroke="#2a3d32" stroke-width="2"/>
+        <g stroke="#2a3d32" stroke-width="2">
+          <rect x="120" y="40" width="60" height="44" rx="8" fill="#1d2c24"/>
+          <path d="M150 52 L150 72 M140 62 L160 62" stroke="#3ddc84" stroke-width="4" stroke-linecap="round"/>
+          <rect x="40" y="140" width="52" height="52" rx="8" fill="#1d2c24"/>
+          <text x="66" y="172" text-anchor="middle" font-family="Consolas, monospace" font-size="20" fill="#e9f3ec">A</text>
+          <rect x="100" y="140" width="52" height="52" rx="8" fill="#1d2c24"/>
+          <text x="126" y="172" text-anchor="middle" font-family="Consolas, monospace" font-size="20" fill="#e9f3ec">S</text>
+          <rect x="160" y="140" width="52" height="52" rx="8" fill="#1d2c24"/>
+          <text x="186" y="172" text-anchor="middle" font-family="Consolas, monospace" font-size="20" fill="#e9f3ec">D</text>
+          <rect x="220" y="140" width="52" height="52" rx="8" fill="#1d2c24"/>
+          <path d="M246 156 L246 176 M236 166 L256 166" stroke="#f2c94c" stroke-width="4" stroke-linecap="round"/>
+        </g>
+      </svg>
+    </div>
+  </div>
+</section>
+
+<section id="features" class="section features">
+  <div class="wrap">
+    <h2 class="section-heading">Built like a real game, not a demo</h2>
+    <p class="section-lede">Under the hood, Viper runs on a proper grid-based simulation with a frame-driven render loop, so movement stays crisp no matter how fast your browser's refresh rate runs.</p>
+    <div class="feature-grid" id="feature-grid">
+      <div class="feature-card">
+        <svg viewBox="0 0 48 48" fill="none"><rect x="6" y="6" width="36" height="36" rx="6" stroke="#3ddc84" stroke-width="3"/><path d="M6 18h36M6 30h36M18 6v36M30 6v36" stroke="#3ddc84" stroke-width="2" opacity="0.5"/></svg>
+        <h3>True grid movement</h3>
+        <p>The snake occupies exact cells on a 20×20 board and turns are queued to the next grid step, so there's never any mushy diagonal drifting.</p>
+      </div>
+      <div class="feature-card">
+        <svg viewBox="0 0 48 48" fill="none"><circle cx="24" cy="24" r="16" stroke="#ef6461" stroke-width="3"/><circle cx="24" cy="24" r="4" fill="#ef6461"/><path d="M24 4v6M24 38v6M4 24h6M38 24h6" stroke="#ef6461" stroke-width="3" stroke-linecap="round"/></svg>
+        <h3>Food that always respawns</h3>
+        <p>Every bite instantly relocates the food to a random open cell, so a fresh target is always waiting — never inside your own tail.</p>
+      </div>
+      <div class="feature-card">
+        <svg viewBox="0 0 48 48" fill="none"><path d="M6 34 L18 22 L26 30 L42 12" stroke="#f2c94c" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/><path d="M34 12h8v8" stroke="#f2c94c" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <h3>Escalating speed</h3>
+        <p>Every fifth piece of food eaten shaves time off each step, ramping the challenge up gradually instead of throwing you in the deep end.</p>
+      </div>
+      <div class="feature-card">
+        <svg viewBox="0 0 48 48" fill="none"><path d="M14 6h20v10a10 10 0 0 1-20 0V6Z" stroke="#3ddc84" stroke-width="3"/><path d="M24 26v8m-8 8h16" stroke="#3ddc84" stroke-width="3" stroke-linecap="round"/><path d="M14 10H8a4 4 0 0 0 4 8" stroke="#3ddc84" stroke-width="2.5"/><path d="M34 10h6a4 4 0 0 1-4 8" stroke="#3ddc84" stroke-width="2.5"/></svg>
+        <h3>Persistent high score</h3>
+        <p>Your best run is saved to <code>localStorage</code> automatically. Close the tab, restart your machine — your record is still waiting when you come back.</p>
+      </div>
+      <div class="feature-card">
+        <svg viewBox="0 0 48 48" fill="none"><rect x="8" y="14" width="32" height="22" rx="4" stroke="#e9f3ec" stroke-width="3"/><path d="M8 20h32" stroke="#e9f3ec" stroke-width="2" opacity="0.5"/><rect x="14" y="24" width="4" height="4" fill="#e9f3ec"/><rect x="22" y="24" width="4" height="4" fill="#e9f3ec"/><rect x="30" y="24" width="4" height="4" fill="#e9f3ec"/></svg>
+        <h3>Pause and restart anytime</h3>
+        <p>Life happens mid-run. Pause freezes the board instantly, and restart wipes the slate clean without a page reload.</p>
+      </div>
+      <div class="feature-card">
+        <svg viewBox="0 0 48 48" fill="none"><rect x="10" y="6" width="28" height="36" rx="5" stroke="#f2c94c" stroke-width="3"/><path d="M18 34h12" stroke="#f2c94c" stroke-width="3" stroke-linecap="round"/><path d="M16 16h16M16 22h10" stroke="#f2c94c" stroke-width="2.5" stroke-linecap="round"/></svg>
+        <h3>Zero dependencies</h3>
+        <p>Everything you see — canvas, styles, sound effects, and logic — lives in one HTML file. No frameworks, no build step, no CDN calls.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="mechanics" class="section mechanics">
+  <div class="wrap section-grid reverse">
+    <div class="section-art" aria-hidden="true">
+      <svg viewBox="0 0 300 240" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect x="10" y="10" width="280" height="220" rx="16" fill="#17231d" stroke="#2a3d32" stroke-width="2"/>
+        <path d="M60 190 C 60 140, 120 140, 120 100 C 120 70, 170 70, 170 50" stroke="#2a3d32" stroke-width="3" fill="none" stroke-dasharray="6 6"/>
+        <circle cx="60" cy="190" r="8" fill="#3ddc84"/>
+        <circle cx="120" cy="100" r="8" fill="#35d47c"/>
+        <circle cx="170" cy="50" r="10" fill="#7cf2b3"/>
+        <text x="200" y="55" font-family="Consolas, monospace" font-size="14" fill="#e9f3ec">step N</text>
+        <text x="140" y="105" font-family="Consolas, monospace" font-size="12" fill="#9db4a6">step N-6</text>
+        <text x="30" y="205" font-family="Consolas, monospace" font-size="12" fill="#9db4a6">tail</text>
+        <rect x="215" y="150" width="60" height="26" rx="6" fill="#1d2c24" stroke="#2a3d32"/>
+        <text x="245" y="167" text-anchor="middle" font-family="Consolas, monospace" font-size="12" fill="#f2c94c">Δt ≥ interval</text>
+      </svg>
+    </div>
+    <div>
+      <h2 class="section-heading">How the frame loop actually works</h2>
+      <p class="section-lede">Viper separates two clocks: your browser's render clock and the game's grid clock. That's the difference between a snake that glides and one that stutters.</p>
+      <p>Every visual frame runs through <code>requestAnimationFrame</code>, which on most displays fires 60 or more times per second. But the snake shouldn't move 60 times a second — that would be unplayably fast. So each frame, Viper checks how much real time has passed since the last grid step. Only once that elapsed time crosses the current step interval does the snake actually advance one cell, eat, grow, or die. Everything else in that frame is just a redraw of the current state.</p>
+      <p>This is what makes the speed-up mechanic clean: increasing difficulty is just shortening that interval number, not touching the rendering code at all. It also means the game stays smooth and correctly paced whether your monitor refreshes at 60Hz, 120Hz, or 144Hz — the visuals redraw every frame, but the simulation itself is locked to real elapsed milliseconds, not frame count.</p>
+    </div>
+  </div>
+</section>
+
+<section id="strategy" class="section strategy">
+  <div class="wrap">
+    <h2 class="section-heading">Strategy notes from long runs</h2>
+    <p class="section-lede">A long snake is a liability as much as it is a trophy. These are the habits that separate a score in the double digits from one in the thousands.</p>
+    <div class="strategy-grid" id="strategy-grid">
+      <div class="strategy-card">
+        <div class="card-icon"><svg viewBox="0 0 40 40" fill="none"><rect x="4" y="4" width="32" height="32" rx="4" stroke="#3ddc84" stroke-width="2.5"/><path d="M4 20h32M20 4v32" stroke="#3ddc84" stroke-width="1.5" opacity="0.5"/></svg></div>
+        <h3>Hug the edges deliberately</h3>
+        <p>Perimeter laps give you predictable, repeatable paths with only one exposed side. Cut across the open middle only when the food is worth the risk.</p>
+      </div>
+      <div class="strategy-card">
+        <div class="card-icon"><svg viewBox="0 0 40 40" fill="none"><path d="M6 30 Q 20 6, 34 30" stroke="#f2c94c" stroke-width="2.5" fill="none"/><circle cx="6" cy="30" r="3" fill="#f2c94c"/><circle cx="34" cy="30" r="3" fill="#f2c94c"/></svg></div>
+        <h3>Plan two turns ahead</h3>
+        <p>By the time speed level 3 hits, reacting to the current cell is too slow. Decide your next two moves as soon as new food appears, not after you arrive.</p>
+      </div>
+      <div class="strategy-card">
+        <div class="card-icon"><svg viewBox="0 0 40 40" fill="none"><rect x="8" y="8" width="24" height="24" rx="12" stroke="#ef6461" stroke-width="2.5"/><path d="M20 14v8l6 4" stroke="#ef6461" stroke-width="2.5" stroke-linecap="round"/></svg></div>
+        <h3>Leave yourself an exit</h3>
+        <p>Never trap your own head in a pocket with only one way out. A tight coil looks impressive but a single wrong turn ends the run instantly.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="leaderboard" class="section leaderboard">
+  <div class="wrap section-grid">
+    <div>
+      <h2 class="section-heading">Your high score lives here, on your machine</h2>
+      <p class="section-lede">There's no server, no login, and no leaderboard shared across the internet — and that's on purpose. Your best score belongs to your browser.</p>
+      <p>Every time a run ends, Viper compares your final score against the number saved in <code>localStorage</code> under a single key. If you beat it, the new value is written immediately, so it's already there the next time this page loads — even after closing the tab, restarting your browser, or turning your computer off overnight. Clear your browser data and the slate wipes clean, which is exactly what the reset button below does on demand, without touching anything else on the page.</p>
+      <button class="btn btn-ghost" id="reset-score-btn" type="button">Reset saved high score</button>
+    </div>
+    <div class="section-art" aria-hidden="true">
+      <svg viewBox="0 0 200 220" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M70 30h60v40a30 30 0 0 1-60 0V30Z" stroke="#f2c94c" stroke-width="4"/>
+        <path d="M70 38H45a20 20 0 0 0 20 30" stroke="#f2c94c" stroke-width="3.5"/>
+        <path d="M130 38h25a20 20 0 0 1-20 30" stroke="#f2c94c" stroke-width="3.5"/>
+        <path d="M100 100v24" stroke="#f2c94c" stroke-width="4"/>
+        <path d="M78 148h44l6 20H72l6-20Z" stroke="#f2c94c" stroke-width="4"/>
+        <rect x="70" y="124" width="60" height="24" rx="4" stroke="#f2c94c" stroke-width="4"/>
+        <text x="100" y="141" text-anchor="middle" font-family="Consolas, monospace" font-size="14" fill="#f2c94c">#1</text>
+      </svg>
+    </div>
+  </div>
+</section>
+
+<section id="faq" class="section faq">
+  <div class="wrap">
+    <h2 class="section-heading">Frequently asked questions</h2>
+    <div class="accordion" id="accordion">
+      <div class="accordion-item">
+        <button class="accordion-trigger" aria-expanded="false" aria-controls="faq-panel-1" id="faq-trigger-1">
+          Does Viper need an internet connection?
+          <span class="chev" aria-hidden="true">▾</span>
+        </button>
+        <div class="accordion-panel" id="faq-panel-1" role="region" aria-labelledby="faq-trigger-1">
+          <p>No. Every asset — markup, styling, illustrations, and game logic — is inlined into this single HTML file. Once the page has loaded once, it will keep working offline, and it never phones out to any server or CDN.</p>
+        </div>
+      </div>
+      <div class="accordion-item">
+        <button class="accordion-trigger" aria-expanded="false" aria-controls="faq-panel-2" id="faq-trigger-2">
+          Where exactly is my high score stored?
+          <span class="chev" aria-hidden="true">▾</span>
+        </button>
+        <div class="accordion-panel" id="faq-panel-2" role="region" aria-labelledby="faq-trigger-2">
+          <p>In your browser's <code>localStorage</code>, scoped to this page's origin. It isn't sent anywhere, isn't tied to an account, and will reset if you clear your browser's site data or open the page in a different browser or device.</p>
+        </div>
+      </div>
+      <div class="accordion-item">
+        <button class="accordion-trigger" aria-expanded="false" aria-controls="faq-panel-3" id="faq-trigger-3">
+          Exactly how much faster does the snake get?
+          <span class="chev" aria-hidden="true">▾</span>
+        </button>
+        <div class="accordion-panel" id="faq-panel-3" role="region" aria-labelledby="faq-trigger-3">
+          <p>Every 5th piece of food trims roughly 10% off the time between grid steps, down to a fast but still controllable floor. The "Speed level" readout on the HUD ticks up each time this happens so you always know where you stand.</p>
+        </div>
+      </div>
+      <div class="accordion-item">
+        <button class="accordion-trigger" aria-expanded="false" aria-controls="faq-panel-4" id="faq-trigger-4">
+          Can I play with touch controls on a phone?
+          <span class="chev" aria-hidden="true">▾</span>
+        </button>
+        <div class="accordion-panel" id="faq-panel-4" role="region" aria-labelledby="faq-trigger-4">
+          <p>Yes. On narrower screens a directional pad appears beneath the board, and you can also swipe directly on the canvas itself in any of the four directions to change course.</p>
+        </div>
+      </div>
+      <div class="accordion-item">
+        <button class="accordion-trigger" aria-expanded="false" aria-controls="faq-panel-5" id="faq-trigger-5">
+          What happens if I reverse direction into my own tail?
+          <span class="chev" aria-hidden="true">▾</span>
+        </button>
+        <div class="accordion-panel" id="faq-panel-5" role="region" aria-labelledby="faq-trigger-5">
+          <p>Viper quietly ignores any input that would immediately reverse the snake into the segment directly behind its head, since that's never a real player intention — it's almost always a fast double key-press. Every other collision with your own body still ends the run.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="about" class="section about">
+  <div class="wrap">
+    <h2 class="section-heading">Why build snake again?</h2>
+    <p>Snake has been rebuilt thousands of times because it's the smallest possible game that still has real stakes: a single rule set, a single failure condition, and a score that only ever goes up until the moment it doesn't. Viper isn't trying to reinvent that formula — it's trying to execute it cleanly. That means grid movement that never feels mushy, a speed curve that ramps instead of spikes, and a persistence layer that respects your progress without asking for an email address. If you've played snake before, everything here will feel instantly familiar. If you haven't, the rules above will get you moving in under a minute.</p>
+  </div>
+</section>
+
+</main>
+
+<footer class="site-footer">
+  <div class="wrap footer-inner">
+    <p>Viper — a single-file snake game. No tracking, no accounts, no network requests.</p>
+    <p>Built with plain HTML, CSS, and JavaScript.</p>
+  </div>
+</footer>
+
+<script>
+(function () {
+  "use strict";
+
+  /* ---------- Theme toggle ---------- */
+  var themeToggle = document.getElementById('theme-toggle');
+  var themeLabel = themeToggle.querySelector('.theme-label');
+  var themeIcon = themeToggle.querySelector('.theme-icon');
+  var savedTheme = localStorage.getItem('viper-theme');
+  if (savedTheme === 'light') {
+    document.documentElement.setAttribute('data-theme', 'light');
+    themeLabel.textContent = 'Light mode';
+    themeIcon.textContent = '☀';
+    themeToggle.setAttribute('aria-pressed', 'true');
+  }
+  themeToggle.addEventListener('click', function () {
+    var isLight = document.documentElement.getAttribute('data-theme') === 'light';
+    if (isLight) {
+      document.documentElement.removeAttribute('data-theme');
+      themeLabel.textContent = 'Dark mode';
+      themeIcon.textContent = '☾';
+      themeToggle.setAttribute('aria-pressed', 'false');
+      localStorage.setItem('viper-theme', 'dark');
+    } else {
+      document.documentElement.setAttribute('data-theme', 'light');
+      themeLabel.textContent = 'Light mode';
+      themeIcon.textContent = '☀';
+      themeToggle.setAttribute('aria-pressed', 'true');
+      localStorage.setItem('viper-theme', 'light');
+    }
+  });
+
+  /* ---------- Accordion (FAQ) ---------- */
+  var accordion = document.getElementById('accordion');
+  accordion.addEventListener('click', function (e) {
+    var trigger = e.target.closest('.accordion-trigger');
+    if (!trigger) return;
+    var expanded = trigger.getAttribute('aria-expanded') === 'true';
+    var panel = document.getElementById(trigger.getAttribute('aria-controls'));
+    trigger.setAttribute('aria-expanded', String(!expanded));
+    if (expanded) {
+      panel.style.maxHeight = 0;
+    } else {
+      panel.style.maxHeight = panel.scrollHeight + 'px';
+    }
+  });
+
+  /* =========================================================
+     SNAKE GAME
+     ========================================================= */
+  var GRID_SIZE = 20;               // 20x20 cells
+  var BASE_INTERVAL_MS = 130;       // starting ms per grid step
+  var MIN_INTERVAL_MS = 55;         // fastest allowed
+  var SPEEDUP_EVERY = 5;            // increase speed every N food
+  var SPEEDUP_FACTOR = 0.90;        // multiply interval by this each speedup
+
+  var canvas = document.getElementById('game-canvas');
+  var ctx = canvas.getContext('2d');
+  var cell = canvas.width / GRID_SIZE;
+
+  var scoreEl = document.getElementById('score-value');
+  var highScoreEl = document.getElementById('high-score-value');
+  var speedEl = document.getElementById('speed-value');
+  var statusEl = document.getElementById('hud-status');
+  var overlay = document.getElementById('overlay');
+  var overlayCard = document.getElementById('overlay-card');
+  var overlayTitle = document.getElementById('overlay-title');
+  var overlayText = document.getElementById('overlay-text');
+  var overlayBtn = document.getElementById('overlay-btn');
+  var pauseBtn = document.getElementById('pause-btn');
+  var restartBtn = document.getElementById('restart-btn');
+  var muteBtn = document.getElementById('mute-btn');
+  var resetScoreBtn = document.getElementById('reset-score-btn');
+
+  var HIGH_SCORE_KEY = 'viper-high-score';
+
+  var state = {
+    snake: [],
+    dir: { x: 1, y: 0 },
+    pendingDir: { x: 1, y: 0 },
+    food: { x: 0, y: 0 },
+    score: 0,
+    highScore: 0,
+    eaten: 0,
+    speedLevel: 1,
+    intervalMs: BASE_INTERVAL_MS,
+    running: false,
+    paused: false,
+    gameOver: false,
+    lastStepTime: 0,
+    muted: false
+  };
+
+  function loadHighScore() {
+    var stored = 0;
+    try {
+      stored = parseInt(localStorage.getItem(HIGH_SCORE_KEY), 10) || 0;
+    } catch (e) {
+      stored = 0;
+    }
+    state.highScore = stored;
+    highScoreEl.textContent = String(stored);
+  }
+
+  function saveHighScoreIfNeeded() {
+    if (state.score > state.highScore) {
+      state.highScore = state.score;
+      try {
+        localStorage.setItem(HIGH_SCORE_KEY, String(state.highScore));
+      } catch (e) { /* storage unavailable, ignore */ }
+      highScoreEl.textContent = String(state.highScore);
+    }
+  }
+
+  function randomEmptyCell() {
+    var occupied = {};
+    state.snake.forEach(function (seg) { occupied[seg.x + ',' + seg.y] = true; });
+    var free = [];
+    for (var x = 0; x < GRID_SIZE; x++) {
+      for (var y = 0; y < GRID_SIZE; y++) {
+        var k = x + ',' + y;
+        if (!occupied[k]) free.push({ x: x, y: y });
+      }
+    }
+    if (free.length === 0) return { x: 0, y: 0 };
+    return free[Math.floor(Math.random() * free.length)];
+  }
+
+  function placeFood() {
+    state.food = randomEmptyCell();
+  }
+
+  function resetState() {
+    var startX = Math.floor(GRID_SIZE / 2);
+    var startY = Math.floor(GRID_SIZE / 2);
+    state.snake = [
+      { x: startX - 2, y: startY },
+      { x: startX - 1, y: startY },
+      { x: startX, y: startY }
+    ];
+    state.dir = { x: 1, y: 0 };
+    state.pendingDir = { x: 1, y: 0 };
+    state.score = 0;
+    state.eaten = 0;
+    state.speedLevel = 1;
+    state.intervalMs = BASE_INTERVAL_MS;
+    state.running = false;
+    state.paused = false;
+    state.gameOver = false;
+    state.lastStepTime = 0;
+    scoreEl.textContent = '0';
+    speedEl.textContent = '1';
+    placeFood();
+    draw();
+  }
+
+  function setDirection(x, y) {
+    // prevent reversing directly into the snake's own body
+    if (state.snake.length > 1 && state.dir.x === -x && state.dir.y === -y) return;
+    state.pendingDir = { x: x, y: y };
+  }
+
+  function beep(freq, duration) {
+    if (state.muted) return;
+    try {
+      var AudioCtx = window.AudioContext || window.webkitAudioContext;
+      if (!AudioCtx) return;
+      if (!beep.ctx) beep.ctx = new AudioCtx();
+      var ctxA = beep.ctx;
+      var osc = ctxA.createOscillator();
+      var gain = ctxA.createGain();
+      osc.type = 'square';
+      osc.frequency.value = freq;
+      gain.gain.value = 0.05;
+      osc.connect(gain);
+      gain.connect(ctxA.destination);
+      osc.start();
+      gain.gain.exponentialRampToValueAtTime(0.0001, ctxA.currentTime + duration);
+      osc.stop(ctxA.currentTime + duration);
+    } catch (e) { /* audio not available */ }
+  }
+
+  function step() {
+    state.dir = state.pendingDir;
+    var head = state.snake[state.snake.length - 1];
+    var newHead = { x: head.x + state.dir.x, y: head.y + state.dir.y };
+
+    // Wall collision
+    if (newHead.x < 0 || newHead.x >= GRID_SIZE || newHead.y < 0 || newHead.y >= GRID_SIZE) {
+      endGame();
+      return;
+    }
+
+    // Self collision (ignore the tail cell that is about to be vacated unless we ate food)
+    var willEat = newHead.x === state.food.x && newHead.y === state.food.y;
+    var bodyToCheck = willEat ? state.snake : state.snake.slice(1);
+    for (var i = 0; i < bodyToCheck.length; i++) {
+      if (bodyToCheck[i].x === newHead.x && bodyToCheck[i].y === newHead.y) {
+        endGame();
+        return;
+      }
+    }
+
+    state.snake.push(newHead);
+
+    if (willEat) {
+      state.score += 10;
+      state.eaten += 1;
+      scoreEl.textContent = String(state.score);
+      beep(660, 0.08);
+      if (state.eaten % SPEEDUP_EVERY === 0) {
+        state.intervalMs = Math.max(MIN_INTERVAL_MS, Math.round(state.intervalMs * SPEEDUP_FACTOR));
+        state.speedLevel += 1;
+        speedEl.textContent = String(state.speedLevel);
+      }
+      placeFood();
+    } else {
+      state.snake.shift();
+    }
+  }
+
+  function endGame() {
+    state.running = false;
+    state.gameOver = true;
+    saveHighScoreIfNeeded();
+    beep(120, 0.3);
+    statusEl.classList.add('is-danger');
+    statusEl.textContent = 'Game over — final score ' + state.score;
+    overlayCard.classList.add('is-danger');
+    overlayTitle.textContent = 'Game Over';
+    overlayText.textContent = 'You scored ' + state.score + ' points. Your best is ' + state.highScore + '. Try again?';
+    overlayBtn.textContent = 'Play Again';
+    showOverlay();
+  }
+
+  function showOverlay() {
+    overlay.classList.remove('is-hidden');
+    // Move focus into the dialog so keyboard and screen-reader users
+    // land on the action that matters, rather than being stranded on
+    // whatever control triggered this state.
+    overlayBtn.focus();
+  }
+  function hideOverlay() { overlay.classList.add('is-hidden'); }
+
+  function draw() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    // checkerboard grid
+    for (var gx = 0; gx < GRID_SIZE; gx++) {
+      for (var gy = 0; gy < GRID_SIZE; gy++) {
+        ctx.fillStyle = (gx + gy) % 2 === 0 ? getCssVar('--color-grid-a') : getCssVar('--color-grid-b');
+        ctx.fillRect(gx * cell, gy * cell, cell, cell);
+      }
+    }
+
+    // food
+    ctx.fillStyle = getCssVar('--color-food');
+    var fx = state.food.x * cell + cell / 2;
+    var fy = state.food.y * cell + cell / 2;
+    ctx.beginPath();
+    ctx.arc(fx, fy, cell * 0.36, 0, Math.PI * 2);
+    ctx.fill();
+
+    // snake
+    for (var s = 0; s < state.snake.length; s++) {
+      var seg = state.snake[s];
+      var isHead = s === state.snake.length - 1;
+      ctx.fillStyle = isHead ? getCssVar('--color-snake-head') : getCssVar('--color-snake');
+      var pad = isHead ? 1 : 2;
+      roundRect(seg.x * cell + pad, seg.y * cell + pad, cell - pad * 2, cell - pad * 2, 5);
+      ctx.fill();
+    }
+  }
+
+  function roundRect(x, y, w, h, r) {
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.arcTo(x + w, y, x + w, y + h, r);
+    ctx.arcTo(x + w, y + h, x, y + h, r);
+    ctx.arcTo(x, y + h, x, y, r);
+    ctx.arcTo(x, y, x + w, y, r);
+    ctx.closePath();
+  }
+
+  var cssVarCache = {};
+  function getCssVar(name) {
+    if (!cssVarCache[name] || cssVarCache._theme !== document.documentElement.getAttribute('data-theme')) {
+      cssVarCache = { _theme: document.documentElement.getAttribute('data-theme') };
+    }
+    if (!cssVarCache[name]) {
+      cssVarCache[name] = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+    }
+    return cssVarCache[name];
+  }
+
+  /* ---------- rAF game loop, grid-stepped by accumulated time ---------- */
+  function loop(timestamp) {
+    requestAnimationFrame(loop);
+    if (!state.running || state.paused) return;
+    if (!state.lastStepTime) state.lastStepTime = timestamp;
+    var elapsed = timestamp - state.lastStepTime;
+    if (elapsed >= state.intervalMs) {
+      state.lastStepTime = timestamp;
+      step();
+      draw();
+    }
+  }
+  requestAnimationFrame(loop);
+
+  /* ---------- Controls ---------- */
+  function startGame() {
+    if (!state.running) {
+      resetState();
+    }
+    state.running = true;
+    state.paused = false;
+    state.gameOver = false;
+    state.lastStepTime = 0;
+    statusEl.classList.remove('is-danger');
+    overlayCard.classList.remove('is-danger');
+    statusEl.textContent = 'Playing';
+    pauseBtn.textContent = 'Pause';
+    hideOverlay();
+    canvas.focus();
+  }
+
+  function togglePause() {
+    if (!state.running || state.gameOver) return;
+    state.paused = !state.paused;
+    if (state.paused) {
+      pauseBtn.textContent = 'Resume';
+      statusEl.textContent = 'Paused';
+      overlayTitle.textContent = 'Paused';
+      overlayText.textContent = 'Take a breath. Score so far: ' + state.score + '.';
+      overlayBtn.textContent = 'Resume';
+      showOverlay();
+    } else {
+      pauseBtn.textContent = 'Pause';
+      statusEl.textContent = 'Playing';
+      state.lastStepTime = 0;
+      hideOverlay();
+      canvas.focus();
+    }
+  }
+
+  function restartGame() {
+    resetState();
+    state.running = true;
+    statusEl.classList.remove('is-danger');
+    overlayCard.classList.remove('is-danger');
+    statusEl.textContent = 'Playing';
+    pauseBtn.textContent = 'Pause';
+    hideOverlay();
+  }
+
+  overlayBtn.addEventListener('click', function () {
+    if (state.paused && state.running) {
+      togglePause();
+    } else {
+      startGame();
+    }
+  });
+
+  pauseBtn.addEventListener('click', togglePause);
+  restartBtn.addEventListener('click', restartGame);
+
+  muteBtn.addEventListener('click', function () {
+    state.muted = !state.muted;
+    muteBtn.setAttribute('aria-pressed', String(state.muted));
+    muteBtn.innerHTML = state.muted
+      ? '<span aria-hidden="true">✕</span> Sound off'
+      : '<span aria-hidden="true">♪</span> Sound on';
+  });
+
+  resetScoreBtn.addEventListener('click', function () {
+    try { localStorage.removeItem(HIGH_SCORE_KEY); } catch (e) {}
+    state.highScore = 0;
+    highScoreEl.textContent = '0';
+    resetScoreBtn.textContent = 'Cleared! Saved high score reset.';
+    setTimeout(function () { resetScoreBtn.textContent = 'Reset saved high score'; }, 1800);
+  });
+
+  var KEY_MAP = {
+    ArrowUp: { x: 0, y: -1 }, w: { x: 0, y: -1 }, W: { x: 0, y: -1 },
+    ArrowDown: { x: 0, y: 1 }, s: { x: 0, y: 1 }, S: { x: 0, y: 1 },
+    ArrowLeft: { x: -1, y: 0 }, a: { x: -1, y: 0 }, A: { x: -1, y: 0 },
+    ArrowRight: { x: 1, y: 0 }, d: { x: 1, y: 0 }, D: { x: 1, y: 0 }
+  };
+
+  window.addEventListener('keydown', function (e) {
+    if (KEY_MAP[e.key]) {
+      e.preventDefault();
+      var d = KEY_MAP[e.key];
+      if (!state.running && !state.gameOver) { startGame(); }
+      setDirection(d.x, d.y);
+    } else if (e.key === ' ') {
+      e.preventDefault();
+      if (!state.running && !state.gameOver) { startGame(); } else { togglePause(); }
+    } else if (e.key === 'r' || e.key === 'R') {
+      restartGame();
+    }
+  });
+
+  function bindTouch(id, x, y) {
+    var btn = document.getElementById(id);
+    btn.addEventListener('click', function () {
+      if (!state.running && !state.gameOver) { startGame(); }
+      setDirection(x, y);
+    });
+  }
+  bindTouch('btn-up', 0, -1);
+  bindTouch('btn-down', 0, 1);
+  bindTouch('btn-left', -1, 0);
+  bindTouch('btn-right', 1, 0);
+
+  // Basic swipe support on canvas for touch devices
+  var touchStart = null;
+  canvas.addEventListener('touchstart', function (e) {
+    var t = e.changedTouches[0];
+    touchStart = { x: t.clientX, y: t.clientY };
+  }, { passive: true });
+  canvas.addEventListener('touchend', function (e) {
+    if (!touchStart) return;
+    var t = e.changedTouches[0];
+    var dx = t.clientX - touchStart.x;
+    var dy = t.clientY - touchStart.y;
+    if (Math.abs(dx) > Math.abs(dy)) {
+      if (Math.abs(dx) > 20) setDirection(dx > 0 ? 1 : -1, 0);
+    } else {
+      if (Math.abs(dy) > 20) setDirection(0, dy > 0 ? 1 : -1);
+    }
+    if (!state.running && !state.gameOver) startGame();
+    touchStart = null;
+  }, { passive: true });
+
+  /* ---------- Init ---------- */
+  loadHighScore();
+  resetState();
+  overlayTitle.textContent = 'Ready?';
+  overlayText.textContent = 'Guide the viper to eat glowing prey, avoid walls and your own tail, and beat your saved high score of ' + state.highScore + '.';
+  overlayBtn.textContent = 'Start Game';
+})();
+</script>
+</body>
+</html>
