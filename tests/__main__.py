@@ -11,7 +11,8 @@ import traceback
 
 MODULES = ("tests.test_tools", "tests.test_security", "tests.test_context",
            "tests.test_memory", "tests.test_skills", "tests.test_session",
-           "tests.test_subagent", "tests.test_harness")
+           "tests.test_subagent", "tests.test_harness", "tests.test_fleet",
+           "tests.test_cli")
 
 
 def main():

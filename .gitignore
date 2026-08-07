@@ -4,3 +4,4 @@ __pycache__/
 env_harenss.sh
 demos/scratch/
 demos/scratch_*/
+.sthenos/
